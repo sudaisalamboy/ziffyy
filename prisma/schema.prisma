@@ -1,0 +1,394 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  // NOTE: SQLite is used for development/prototyping. For production with
+  // concurrent writes, migrate to PostgreSQL (change provider + url + install pg).
+  // Single-writer lock applies — multiple server instances will cause WAL contention.
+  provider = "sqlite"
+  url      = "file:../db/custom.db"
+}
+
+model User {
+  id           Int      @id @default(autoincrement())
+  name         String
+  email        String   @unique
+  mobile       String   @default("")
+  password     String
+  role         String   @default("customer")
+  status       String   @default("active")
+  address      String?  @default("")
+  profileImage String?  @default("")
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  cart                    Cart?
+  orders                  Order[]
+  payments                Payment[]
+  needs                   Need[]
+  needComments            NeedComment[]
+  notifications           Notification[]
+  userAddresses           UserAddress[]
+  ratingsReviews          RatingsReview[]
+  shopOwner               ShopOwner?
+  deliveryBoy             DeliveryBoy?
+  deliveryAssignmentsMade DeliveryAssignment[] @relation("AdminAssignments")
+  activityLogs            AdminActivityLog[]   @relation("AdminActivity")
+
+  @@index([role])
+  @@index([status])
+  @@index([role, status])
+}
+
+model Cart {
+  id        Int        @id @default(autoincrement())
+  userId    Int        @unique
+  createdAt DateTime   @default(now())
+  user      User       @relation(fields: [userId], references: [id])
+  items     CartItem[]
+}
+
+model CartItem {
+  id        Int      @id @default(autoincrement())
+  cartId    Int
+  productId Int
+  quantity  Int      @default(1)
+  createdAt DateTime @default(now())
+  cart      Cart     @relation(fields: [cartId], references: [id], onDelete: Cascade)
+  product   Product  @relation(fields: [productId], references: [id])
+}
+
+model Product {
+  id              Int       @id @default(autoincrement())
+  shopOwnerId     Int
+  title           String
+  description     String?   @default("")
+  price           Float
+  image           String?   @default("")
+  stock           Int       @default(0)
+  category        String?   @default("")
+  status          String    @default("pending")
+  rejectionReason String?   @default("")
+  approvedBy      Int?
+  approvedAt      DateTime?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  shopOwner  ShopOwner   @relation(fields: [shopOwnerId], references: [id])
+  cartItems  CartItem[]
+  orderItems OrderItem[]
+
+  @@index([shopOwnerId])
+  @@index([status])
+  @@index([status, stock])
+  @@index([category])
+}
+
+model Order {
+  id               Int      @id @default(autoincrement())
+  userId           Int
+  offerId          Int?
+  orderNumber      String   @unique
+  totalAmount      Float
+  deliveryFee      Float    @default(0)
+  commissionAmount Float    @default(0)
+  shopEarning      Float    @default(0)
+  paymentStatus    String   @default("pending")
+  orderStatus      String   @default("pending")
+  paymentMethod    String   @default("cod")
+  orderType        String   @default("product")
+  shippingAddress  String
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  user                User                 @relation(fields: [userId], references: [id])
+  items               OrderItem[]
+  payments            Payment[]
+  statusLogs          OrderStatusLog[]
+  deliveryAssignments DeliveryAssignment[]
+
+  @@index([userId])
+  @@index([orderStatus])
+}
+
+model OrderItem {
+  id          Int      @id @default(autoincrement())
+  orderId     Int
+  productId   Int
+  productName String
+  quantity    Int
+  unitPrice   Float
+  totalPrice  Float
+  createdAt   DateTime @default(now())
+
+  order   Order   @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  product Product @relation(fields: [productId], references: [id])
+
+  @@index([orderId])
+  @@index([productId])
+}
+
+model OrderStatusLog {
+  id        Int      @id @default(autoincrement())
+  orderId   Int
+  status    String
+  notes     String?  @default("")
+  changedBy Int
+  createdAt DateTime @default(now())
+
+  order Order @relation(fields: [orderId], references: [id], onDelete: Cascade)
+}
+
+model Payment {
+  id            Int      @id @default(autoincrement())
+  orderId       Int
+  userId        Int
+  amount        Float
+  paymentMethod String
+  transactionId String?  @default("")
+  paymentStatus String   @default("pending")
+  screenshot    String?  @default("")
+  adminNotes    String?  @default("")
+  createdAt     DateTime @default(now())
+
+  order Order @relation(fields: [orderId], references: [id])
+  user  User  @relation(fields: [userId], references: [id])
+}
+
+model ShopOwner {
+  id              Int       @id @default(autoincrement())
+  userId          Int       @unique
+  shopName        String
+  shopAddress     String
+  shopImage       String?   @default("")
+  status          String    @default("pending")
+  rejectionReason String?   @default("")
+  approvedBy      Int?
+  approvedAt      DateTime?
+  createdAt       DateTime  @default(now())
+
+  user     User      @relation(fields: [userId], references: [id])
+  products Product[]
+
+  @@index([userId])
+  @@index([status])
+}
+
+model DeliveryBoy {
+  id              Int       @id @default(autoincrement())
+  userId          Int       @unique
+  address         String
+  vehicleType     String?   @default("")
+  vehicleNumber   String?   @default("")
+  status          String    @default("pending")
+  approvedBy      Int?
+  approvedAt      DateTime?
+  totalDeliveries Int       @default(0)
+  rating          Float     @default(0)
+  walletBalance   Float     @default(0)
+  createdAt       DateTime  @default(now())
+
+  user                User                 @relation(fields: [userId], references: [id])
+  deliveryAssignments DeliveryAssignment[]
+  deliveryHistory     DeliveryHistory[]
+  offers              Offer[]
+  walletTransactions  WalletTransaction[]
+  withdrawals         Withdrawal[]
+  @@index([status])
+}
+
+model DeliveryAssignment {
+  id            Int       @id @default(autoincrement())
+  orderId       Int
+  deliveryBoyId Int
+  assignedBy    Int
+  status        String    @default("assigned")
+  assignedAt    DateTime  @default(now())
+  deliveredAt   DateTime?
+  deliveryNotes String?   @default("")
+
+  order       Order       @relation(fields: [orderId], references: [id])
+  deliveryBoy DeliveryBoy @relation(fields: [deliveryBoyId], references: [id])
+  admin       User        @relation("AdminAssignments", fields: [assignedBy], references: [id])
+
+  @@index([orderId])
+  @@index([deliveryBoyId])
+  @@index([status])
+}
+
+model DeliveryHistory {
+  id             Int      @id @default(autoincrement())
+  deliveryBoyId  Int
+  orderId        Int
+  deliveryStatus String
+  notes          String?  @default("")
+  createdAt      DateTime @default(now())
+
+  deliveryBoy DeliveryBoy @relation(fields: [deliveryBoyId], references: [id])
+}
+
+model Need {
+  id          Int      @id @default(autoincrement())
+  userId      Int
+  title       String
+  description String?  @default("")
+  priceType   String   @default("unknown")
+  exactPrice  Float?
+  minPrice    Float?
+  maxPrice    Float?
+  urgency     String   @default("1-2 days")
+  image       String?  @default("")
+  status      String   @default("active")
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  user     User          @relation(fields: [userId], references: [id])
+  comments NeedComment[]
+  offers   Offer[]
+
+  @@index([userId])
+  @@index([status])
+}
+
+model NeedComment {
+  id        Int      @id @default(autoincrement())
+  needId    Int
+  userId    Int
+  comment   String
+  createdAt DateTime @default(now())
+
+  need Need @relation(fields: [needId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id])
+}
+
+model Offer {
+  id            Int       @id @default(autoincrement())
+  needId        Int
+  customerId    Int
+  deliveryBoyId Int
+  offerAmount   Float
+  message       String?   @default("")
+  status        String    @default("sent")
+  createdAt     DateTime  @default(now())
+  respondedAt   DateTime?
+
+  need        Need        @relation(fields: [needId], references: [id])
+  deliveryBoy DeliveryBoy @relation(fields: [deliveryBoyId], references: [id])
+}
+
+model Notification {
+  id        Int      @id @default(autoincrement())
+  userId    Int
+  title     String
+  message   String
+  isRead    Boolean  @default(false)
+  type      String?  @default("")
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id])
+
+  @@index([userId, isRead])
+  @@index([userId])
+  @@index([isRead])
+}
+
+model UserAddress {
+  id          Int      @id @default(autoincrement())
+  userId      Int
+  fullAddress String
+  landmark    String?  @default("")
+  pincode     String?  @default("")
+  city        String?  @default("")
+  state       String?  @default("")
+  isDefault   Boolean  @default(false)
+  createdAt   DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id])
+}
+
+model RatingsReview {
+  id         Int      @id @default(autoincrement())
+  userId     Int
+  targetType String
+  targetId   Int
+  rating     Int
+  review     String?  @default("")
+  createdAt  DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id])
+}
+
+model AdminActivityLog {
+  id        Int      @id @default(autoincrement())
+  adminId   Int
+  action    String
+  tableName String?  @default("")
+  recordId  Int?
+  message   String?  @default("")
+  createdAt DateTime @default(now())
+
+  admin User @relation("AdminActivity", fields: [adminId], references: [id])
+}
+
+model WalletTransaction {
+  id            Int      @id @default(autoincrement())
+  deliveryBoyId Int
+  type          String
+  amount        Float
+  description   String
+  orderId       Int?
+  createdAt     DateTime @default(now())
+
+  deliveryBoy DeliveryBoy @relation(fields: [deliveryBoyId], references: [id])
+}
+
+model Withdrawal {
+  id             Int       @id @default(autoincrement())
+  deliveryBoyId  Int
+  amount         Float
+  status         String    @default("pending")
+  upiId          String
+  adminNotes     String?   @default("")
+  processedBy    Int?
+  processedAt    DateTime?
+  idempotencyKey String?   @unique
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  deliveryBoy DeliveryBoy @relation(fields: [deliveryBoyId], references: [id])
+}
+
+model ShopOwnerApplication {
+  id           Int      @id @default(autoincrement())
+  name         String?  @default("")
+  email        String?  @default("")
+  mobile       String?  @default("")
+  password     String?  @default("")
+  shopName     String?  @default("")
+  address      String?  @default("")
+  status       String   @default("pending")
+  adminComment String?  @default("")
+  createdAt    DateTime @default(now())
+}
+
+model Settings {
+  id           Int      @id @default(autoincrement())
+  settingKey   String   @unique
+  settingValue String?  @default("")
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+}
+
+model ChatMessage {
+  id        Int      @id @default(autoincrement())
+  orderId   Int
+  senderId  Int
+  senderRole String
+  message   String
+  read      Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  @@index([orderId])
+  @@index([senderId])
+}

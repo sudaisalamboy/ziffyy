@@ -1,0 +1,92 @@
+# Dependencies
+node_modules/
+.pnp
+.pnp.*
+.yarn/*
+!.yarn/patches
+!.yarn/plugins
+!.yarn/releases
+!.yarn/versions
+
+# Next.js
+.next/
+/out/
+
+# Production
+/build
+
+# Misc
+.DS_Store
+*.pem
+Thumbs.db
+
+# Debug
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.pnpm-debug.log*
+*.log
+dev.log
+dev.out.log
+server.log
+
+# Environment
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+!.env.example
+
+# TypeScript
+*.tsbuildinfo
+next-env.d.ts
+
+# Database
+db/*.db
+db/*.db-journal
+db/*.db-wal
+db/pgdata/
+
+# Testing
+tests/
+coverage/
+*.test.ts
+*.spec.ts
+e2e-test.ts
+api-test.mjs
+test-results.txt
+
+# Infrastructure (not needed for public repo)
+.zscripts/
+Caddyfile
+keep-alive.sh
+
+# Upload / Download (old PHP project backups)
+upload/
+download/
+
+# Tool output
+tool-results/
+worklog.md
+
+# Screenshots
+*.png
+
+# Skills directory
+/skills/
+
+# Examples
+examples/
+
+# Claude / AI
+.claude
+.z-ai-config
+prompt
+
+# Lock files (we use bun.lock)
+package-lock.json
+mini-services/*/bun.lock
+
+# Random junk
+--timeout
