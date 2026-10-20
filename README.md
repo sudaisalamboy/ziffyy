@@ -12,6 +12,16 @@ A full-stack grocery delivery web application built with **Next.js 16**, **TypeS
 
 ---
 
+## 📸 Preview
+
+<p align="center">
+  <img src="preview/preview.png" alt="FreshKart Preview" width="100%" />
+</p>
+
+> 📖 **Full setup instructions:** see [SETUP.md](SETUP.md) for detailed installation, configuration, and deployment guide.
+
+---
+
 ## ✨ Features
 
 ### 👤 Multi-Role System
